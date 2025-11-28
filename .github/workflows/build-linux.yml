@@ -1,4 +1,4 @@
-name: Build Aseprite Linux (Auto-Skia)
+name: Build Aseprite Linux (Fixed)
 
 on:
   workflow_dispatch:
@@ -18,16 +18,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y g++ cmake ninja-build libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libfontconfig1-dev unzip
 
-    - name: Download Skia (Automatic)
+    - name: Download Skia (Fixed Version)
       run: |
-        # 这一步是关键：自动读取源码中的配置，获取正确的下载链接
-        # 避免因为版本不匹配导致报错
-        skia_url=$(grep -oP 'https://github.com/aseprite/skia/releases/download/[^"]+' laf/misc/skia-url.sh | head -n 1)
-        echo "Found Skia URL: $skia_url"
+        # 直接使用官方文档推荐的 m102 稳定版链接，不整自动检测了
+        wget https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Linux-Release-x64-libstdc++.zip -O skia.zip
         
-        # 下载并解压
-        wget "$skia_url" -O skia.zip
+        # 解压
         unzip skia.zip -d skia
+        
+        # 打印一下确认解压成功
+        ls -R skia | head -n 10
 
     - name: Create Build Directory
       run: mkdir build
@@ -47,3 +47,18 @@ jobs:
     - name: Build Aseprite
       run: |
         cd build
+        ninja aseprite
+
+    - name: Prepare Bundle
+      run: |
+        cd build/bin
+        # 赋予执行权限，防止下载后不能运行
+        chmod +x aseprite
+        # 打包
+        tar -czvf aseprite-linux.tar.gz data aseprite
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Aseprite-Linux
+        path: build/bin/aseprite-linux.tar.gz
