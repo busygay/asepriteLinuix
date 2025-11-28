@@ -1,4 +1,4 @@
-name: Build Aseprite Linux (Fixed)
+name: Build Aseprite v1.3.2 (Stable)
 
 on:
   workflow_dispatch:
@@ -8,26 +8,24 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout Aseprite
+    - name: Checkout Aseprite v1.3.2
       uses: actions/checkout@v4
       with:
+        repository: aseprite/aseprite
+        ref: v1.3.2             # <--- 关键修改：强制使用稳定的 v1.3.2 版本
         submodules: recursive
 
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ cmake ninja-build libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libfontconfig1-dev unzip
+        # 补充了一些官方文档要求的依赖库，防止因为缺库导致的报错
+        sudo apt-get install -y g++ cmake ninja-build libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libfontconfig1-dev libpixman-1-dev libfreetype6-dev libharfbuzz-dev zlib1g-dev unzip
 
-    - name: Download Skia (Fixed Version)
+    - name: Download Skia (m102 for v1.3)
       run: |
-        # 直接使用官方文档推荐的 m102 稳定版链接，不整自动检测了
+        # v1.3.2 完美兼容 m102 版本
         wget https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Linux-Release-x64-libstdc++.zip -O skia.zip
-        
-        # 解压
         unzip skia.zip -d skia
-        
-        # 打印一下确认解压成功
-        ls -R skia | head -n 10
 
     - name: Create Build Directory
       run: mkdir build
@@ -36,7 +34,7 @@ jobs:
       run: |
         cd build
         cmake \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_BUILD_TYPE=Release \
           -DLAF_BACKEND=skia \
           -DSKIA_DIR=../skia \
           -DSKIA_LIBRARY_DIR=../skia/out/Release-x64 \
@@ -52,13 +50,13 @@ jobs:
     - name: Prepare Bundle
       run: |
         cd build/bin
-        # 赋予执行权限，防止下载后不能运行
+        # 赋予运行权限
         chmod +x aseprite
-        # 打包
-        tar -czvf aseprite-linux.tar.gz data aseprite
+        # 打包 data 文件夹和 aseprite 主程序
+        tar -czvf aseprite-linux-v1.3.2.tar.gz data aseprite
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Aseprite-Linux
-        path: build/bin/aseprite-linux.tar.gz
+        name: Aseprite-v1.3.2-Linux
+        path: build/bin/aseprite-linux-v1.3.2.tar.gz
